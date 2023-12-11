@@ -7,8 +7,8 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 logging.basicConfig(level=logging.INFO)
 
 # Replace 'YOUR_TELEGRAM_API_TOKEN' with the actual API token from BotFather
-TELEGRAM_API_TOKEN = 'YOUR TOKEN'
-NZBGET_API_URL = 'http://nzbget:tegbzn6789@IP/jsonrpc'  # Replace with your NZBGet server URL
+TELEGRAM_API_TOKEN = 'YOUR_TELEGRAM_API_TOKEN'
+NZBGET_API_URL = 'http://nzbget:tegbzn6789@IP:PORT or URL/jsonrpc'  # Replace with your NZBGet server URL
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Hello! I am your NZBGet bot. Use /status to get the current queue status.')
@@ -93,6 +93,76 @@ def status(update: Update, context: CallbackContext) -> None:
         logging.error(f"An error occurred: {e}")
         update.message.reply_text("An error occurred while processing your request. Please try again later.")
 
+def cancel(update: Update, context: CallbackContext) -> None:
+    try:
+        nzb_id = context.args[0] if context.args else None
+        if not nzb_id:
+            update.message.reply_text("Please provide an NZB ID to cancel.")
+            return
+
+        response_cancel = requests.post(
+            NZBGET_API_URL,
+            json={"method": "editqueue", "params": ["GroupDelete", 0, "", [int(nzb_id)]], "id": 1}
+        )
+        response_cancel.raise_for_status()
+        data_cancel = response_cancel.json()
+
+        if data_cancel.get("result") is True:
+            update.message.reply_text(f"NZB ID {nzb_id} has been removed from the download queue.")
+        else:
+            update.message.reply_text(f"Failed to remove NZB ID {nzb_id} from the download queue.")
+
+
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        update.message.reply_text("An error occurred while processing your request. Please try again later.")
+
+def pause(update: Update, context: CallbackContext) -> None:
+    try:
+        nzb_id = context.args[0] if context.args else None
+        if not nzb_id:
+            update.message.reply_text("Please provide an NZB ID to pause.")
+            return
+
+        response_pause = requests.post(
+            NZBGET_API_URL,
+            json={"method": "editqueue", "params": ["GroupPause", 0, "", [int(nzb_id)]], "id": 1}
+        )
+        response_pause.raise_for_status()
+        data_pause = response_pause.json()
+
+        if data_pause.get("result") is True:
+            update.message.reply_text(f"Group with NZB ID {nzb_id} has been paused.")
+        else:
+            update.message.reply_text(f"Failed to pause group with NZB ID {nzb_id}.")
+
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        update.message.reply_text("An error occurred while processing your request. Please try again later.")
+
+def resume(update: Update, context: CallbackContext) -> None:
+    try:
+        nzb_id = context.args[0] if context.args else None
+        if not nzb_id:
+            update.message.reply_text("Please provide an NZB ID to resume.")
+            return
+
+        response_resume = requests.post(
+            NZBGET_API_URL,
+            json={"method": "editqueue", "params": ["GroupResume", 0, "", [int(nzb_id)]], "id": 1}
+        )
+        response_resume.raise_for_status()
+        data_resume = response_resume.json()
+
+        if data_resume.get("result") is True:
+            update.message.reply_text(f"Group with NZB ID {nzb_id} has been resumed.")
+        else:
+            update.message.reply_text(f"Failed to resume group with NZB ID {nzb_id}.")
+
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        update.message.reply_text("An error occurred while processing your request. Please try again later.")
+
 # Set up the updater
 updater = Updater(token=TELEGRAM_API_TOKEN, use_context=True)
 dispatcher = updater.dispatcher
@@ -100,6 +170,9 @@ dispatcher = updater.dispatcher
 # Register command handlers
 dispatcher.add_handler(CommandHandler("start", start))
 dispatcher.add_handler(CommandHandler("status", status))
+dispatcher.add_handler(CommandHandler("cancel", cancel, pass_args=True))
+dispatcher.add_handler(CommandHandler("pause", pause, pass_args=True))
+dispatcher.add_handler(CommandHandler("resume", resume, pass_args=True))
 
 # Start the Bot
 updater.start_polling()
